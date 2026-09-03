@@ -2,22 +2,12 @@ version: '3.8'
 
 services:
   shortener-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_ACTOR:-yusufparker}/shortenurl:latest
     container_name: nextjs-shortener
     restart: always
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      # - DATABASE_URL="file:./dev.db" # Add your database URL here
     volumes:
-      # Mount the database file if using SQLite
       - ./prisma/dev.db:/app/prisma/dev.db
-    # networks:
-    #   - webnet
-
-# networks:
-#   webnet:
-#     external: true
