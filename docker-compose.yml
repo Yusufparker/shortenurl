@@ -9,5 +9,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+    env_file:
+      - .env
     volumes:
       - ./prisma/dev.db:/app/prisma/dev.db
