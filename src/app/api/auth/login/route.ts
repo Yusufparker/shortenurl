@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     cookieStore.set('session', session, {
       expires,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: request.url.startsWith('https'),
       sameSite: 'lax',
       path: '/',
     });
