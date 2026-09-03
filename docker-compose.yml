@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   shortener-app:
-    image: ghcr.io/${GITHUB_ACTOR:-yusufparker}/shortenurl:latest
+    image: ghcr.io/yusufparker/shortenurl:latest
     container_name: nextjs-shortener
     restart: always
     ports:
