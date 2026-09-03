@@ -12,4 +12,4 @@ services:
     env_file:
       - .env
     volumes:
-      - ./prisma/dev.db:/app/prisma/dev.db
+      - ./prisma:/app/prisma
