@@ -67,5 +67,5 @@ jobs:
             docker compose up -d &&
             echo 'Waiting for container to start...' &&
             sleep 5 &&
-            docker exec nextjs-shortener npx -y prisma db push --accept-data-loss
+            docker exec nextjs-shortener npx -y prisma@6.19.3 db push --accept-data-loss
           "
