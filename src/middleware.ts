@@ -4,7 +4,13 @@ import { decrypt } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
   // Protect both shorten and urls API routes
-  if (request.nextUrl.pathname === '/api/shorten' || request.nextUrl.pathname === '/api/urls') {
+  if (
+    request.nextUrl.pathname === '/api/shorten' || 
+    request.nextUrl.pathname.startsWith('/api/urls') ||
+    request.nextUrl.pathname.startsWith('/api/tags') ||
+    request.nextUrl.pathname.startsWith('/api/domains') ||
+    request.nextUrl.pathname === '/api/stats'
+  ) {
     const sessionCookie = request.cookies.get('session')?.value;
 
     if (!sessionCookie) {
@@ -25,5 +31,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/shorten', '/api/urls'],
+  matcher: ['/api/shorten', '/api/urls/:path*', '/api/tags/:path*', '/api/domains/:path*', '/api/stats'],
 };
