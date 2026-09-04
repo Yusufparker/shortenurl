@@ -8,7 +8,16 @@ function generateShortCode(length = 6) {
 
 export async function POST(request: Request) {
   try {
-    const { originalUrl, customSlug, title: customTitle, tags, domainId } = await request.json();
+    const { 
+      originalUrl, 
+      customSlug, 
+      title: customTitle, 
+      tags, 
+      domainId,
+      expiresAt,
+      fbPixelId,
+      googleTagId
+    } = await request.json();
 
     if (!originalUrl) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
@@ -77,6 +86,9 @@ export async function POST(request: Request) {
         shortCode,
         title,
         domainId: domainId || null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        fbPixelId: fbPixelId || null,
+        googleTagId: googleTagId || null,
         ...(tagConnectOrCreate && { tags: { connectOrCreate: tagConnectOrCreate } })
       },
       include: {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Plus, X, Download } from "lucide-react";
+import { Copy, Plus, X, Download, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -17,6 +17,11 @@ export default function CreateUrlPage() {
   const [utmSource, setUtmSource] = useState("");
   const [utmMedium, setUtmMedium] = useState("");
   const [utmCampaign, setUtmCampaign] = useState("");
+
+  const [expiresAt, setExpiresAt] = useState("");
+  const [fbPixelId, setFbPixelId] = useState("");
+  const [googleTagId, setGoogleTagId] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Domains
   const [domains, setDomains] = useState<{id: string, host: string}[]>([]);
@@ -104,7 +109,10 @@ export default function CreateUrlPage() {
         originalUrl: finalUrl,
         customSlug: customSlug || undefined,
         title: title || undefined,
-        tags
+        tags,
+        expiresAt: expiresAt || undefined,
+        fbPixelId: fbPixelId || undefined,
+        googleTagId: googleTagId || undefined
       };
 
       if (selectedDomain) {
@@ -132,6 +140,9 @@ export default function CreateUrlPage() {
         setUtmSource("");
         setUtmMedium("");
         setUtmCampaign("");
+        setExpiresAt("");
+        setFbPixelId("");
+        setGoogleTagId("");
       } else {
         setError(data.error || "Something went wrong");
       }
@@ -164,75 +175,20 @@ export default function CreateUrlPage() {
               className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
             />
           </div>
-
-          <div className="pt-2">
-            <div className="flex items-center justify-between mb-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useUTM}
-                  onChange={(e) => setUseUTM(e.target.checked)}
-                  className="w-4 h-4 text-black border-zinc-300 rounded focus:ring-black dark:focus:ring-white dark:bg-zinc-800 dark:border-zinc-600"
-                />
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">UTM Builder (Optional)</span>
-              </label>
-            </div>
-            
-            {useUTM && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-6 animate-in slide-in-from-top-2 fade-in duration-200">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Source *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. facebook"
-                    value={utmSource}
-                    onChange={(e) => setUtmSource(e.target.value)}
-                    required={useUTM}
-                    className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Medium *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. cpc"
-                    value={utmMedium}
-                    onChange={(e) => setUtmMedium(e.target.value)}
-                    required={useUTM}
-                    className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Campaign</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. summer_sale"
-                    value={utmCampaign}
-                    onChange={(e) => setUtmCampaign(e.target.value)}
-                    className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Domain (Optional)
+                Title (Optional)
               </label>
-              <select
-                value={selectedDomain}
-                onChange={(e) => setSelectedDomain(e.target.value)}
+              <input
+                type="text"
+                placeholder="Leave empty to auto-fetch"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="">Default Domain</option>
-                {domains.map(d => (
-                  <option key={d.id} value={d.id}>{d.host}</option>
-                ))}
-              </select>
+              />
             </div>
-            
+
             <div className="space-y-2">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Custom Short Code (Optional)
@@ -246,19 +202,6 @@ export default function CreateUrlPage() {
               />
             </div>
           </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Title (optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Leave empty to auto-fetch"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -301,6 +244,127 @@ export default function CreateUrlPage() {
               </div>
             )}
           </div>
+
+          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-6">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center justify-between w-full py-2 px-1 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white transition-colors"
+            >
+              <span>Advanced Settings (Optional)</span>
+              {showAdvanced ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+          </div>
+
+          {showAdvanced && (
+            <div className="space-y-6 animate-in slide-in-from-top-2 fade-in duration-300 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useUTM}
+                      onChange={(e) => setUseUTM(e.target.checked)}
+                      className="w-4 h-4 text-black border-zinc-300 rounded focus:ring-black dark:focus:ring-white dark:bg-zinc-800 dark:border-zinc-600"
+                    />
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">UTM Builder</span>
+                  </label>
+                </div>
+                
+                {useUTM && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-6 animate-in slide-in-from-top-2 fade-in duration-200">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Source *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. facebook"
+                        value={utmSource}
+                        onChange={(e) => setUtmSource(e.target.value)}
+                        required={useUTM}
+                        className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Medium *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. cpc"
+                        value={utmMedium}
+                        onChange={(e) => setUtmMedium(e.target.value)}
+                        required={useUTM}
+                        className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Campaign</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. summer_sale"
+                        value={utmCampaign}
+                        onChange={(e) => setUtmCampaign(e.target.value)}
+                        className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Expiration Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Retargeting Pixels
+                  </label>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Facebook Pixel ID (e.g. 123456789)"
+                      value={fbPixelId}
+                      onChange={(e) => setFbPixelId(e.target.value)}
+                      className="w-full py-2 px-3 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Google Tag ID (e.g. G-XXXXXXX)"
+                      value={googleTagId}
+                      onChange={(e) => setGoogleTagId(e.target.value)}
+                      className="w-full py-2 px-3 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Domain
+                </label>
+                <select
+                  value={selectedDomain}
+                  onChange={(e) => setSelectedDomain(e.target.value)}
+                  className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">Default Domain</option>
+                  {domains.map(d => (
+                    <option key={d.id} value={d.id}>{d.host}</option>
+                  ))}
+                </select>
+              </div>
+
+
+
+            </div>
+          )}
 
           {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
 
