@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { UAParser } from 'ua-parser-js';
 
 export async function GET(
   request: Request,
@@ -32,6 +33,13 @@ export async function GET(
       const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
       const userAgent = request.headers.get('user-agent') || 'unknown';
       const referer = request.headers.get('referer') || 'unknown';
+      const country = request.headers.get('cf-ipcountry') || 'Unknown';
+
+      const parser = new UAParser(userAgent);
+      const browser = parser.getBrowser().name || 'Unknown';
+      const os = parser.getOS().name || 'Unknown';
+      const deviceType = parser.getDevice().type;
+      const device = deviceType === 'mobile' || deviceType === 'tablet' || deviceType === 'wearable' ? 'Mobile' : 'Desktop';
 
       await prisma.$transaction([
         prisma.url.update({
@@ -44,6 +52,10 @@ export async function GET(
             ip: ip.split(',')[0].trim(),
             userAgent,
             referer,
+            country,
+            browser,
+            os,
+            device
           }
         })
       ]);
