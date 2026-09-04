@@ -2,47 +2,99 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 
+function generateShortCode(length = 6) {
+  return crypto.randomBytes(length).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, length);
+}
+
 export async function POST(request: Request) {
   try {
-    const { originalUrl } = await request.json();
+    const { originalUrl, customSlug, title: customTitle, tags, domainId } = await request.json();
 
     if (!originalUrl) {
-      return NextResponse.json(
-        { error: 'Original URL is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    // Validate URL
-    let urlToSave = originalUrl;
+    // Basic URL validation
     try {
-      new URL(urlToSave);
-    } catch (_) {
-      // If no protocol is provided, assume https
-      urlToSave = `https://${urlToSave}`;
-      try {
-        new URL(urlToSave);
-      } catch (__) {
-        return NextResponse.json(
-          { error: 'Invalid URL format' },
-          { status: 400 }
-        );
+      new URL(originalUrl);
+    } catch (e) {
+      return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+    }
+
+    let shortCode = customSlug;
+    
+    if (customSlug) {
+      // Check if custom slug is already in use for this domain
+      const existing = await prisma.url.findFirst({
+        where: { shortCode: customSlug, domainId: domainId || null }
+      });
+      if (existing) {
+        return NextResponse.json({ error: 'Custom slug is already in use for this domain' }, { status: 400 });
+      }
+    } else {
+      // Generate a unique short code
+      let isUnique = false;
+      while (!isUnique) {
+        shortCode = generateShortCode();
+        const existing = await prisma.url.findFirst({
+          where: { shortCode, domainId: domainId || null }
+        });
+        if (!existing) {
+          isUnique = true;
+        }
       }
     }
 
-    // Generate a unique 6-character short code
-    const shortCode = crypto.randomBytes(4).toString('hex').slice(0, 6);
+    // Title scraping (if not provided)
+    let title = customTitle || null;
+    if (!title) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const response = await fetch(originalUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        const html = await response.text();
+        const match = html.match(/<title>([^<]*)<\/title>/i);
+        if (match && match[1]) {
+          title = match[1].trim();
+        }
+      } catch (e) {
+        // silently fail title scraping
+      }
+    }
 
-    const newUrl = await prisma.url.create({
+    // Handle Tags mapping
+    const tagConnectOrCreate = tags ? tags.map((tagName: string) => ({
+      where: { name: tagName.toLowerCase() },
+      create: { name: tagName.toLowerCase() }
+    })) : undefined;
+
+    // Create URL record
+    const url = await prisma.url.create({
       data: {
-        originalUrl: urlToSave,
+        originalUrl,
         shortCode,
+        title,
+        domainId: domainId || null,
+        ...(tagConnectOrCreate && { tags: { connectOrCreate: tagConnectOrCreate } })
       },
+      include: {
+        domain: true
+      }
     });
 
-    return NextResponse.json(newUrl, { status: 201 });
+    // Construct the actual short URL for the client response
+    let baseHost = request.headers.get('host') || 'localhost:3000';
+    let protocol = 'http://';
+    if (baseHost !== 'localhost:3000') protocol = 'https://';
+    
+    const domainHost = url.domain ? url.domain.host : baseHost;
+    const shortUrl = `${protocol}${domainHost}/${url.shortCode}`;
+
+    return NextResponse.json({ ...url, shortUrl }, { status: 201 });
   } catch (error) {
-    console.error('Error generating short URL:', error);
+    console.error('Error creating short URL:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

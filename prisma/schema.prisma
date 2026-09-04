@@ -10,11 +10,43 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+model Domain {
+  id        String   @id @default(cuid())
+  host      String   @unique // e.g., "y.id", "s.id"
+  urls      Url[]
+  createdAt DateTime @default(now())
+}
+
 model Url {
-  id          String   @id @default(cuid()) // Unique short code
+  id          String   @id @default(cuid()) // Unique internal ID
   originalUrl String
-  shortCode   String   @unique
+  shortCode   String
+  title       String?
   clicks      Int      @default(0)
+  tags        Tag[]
+  domainId    String?  // Null means it uses the default domain
+  domain      Domain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  visits      Visit[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([domainId, shortCode])
+}
+
+model Visit {
+  id        String   @id @default(cuid())
+  urlId     String
+  url       Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  ip        String?
+  userAgent String?
+  referer   String?
+  country   String?
+  createdAt DateTime @default(now())
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  urls      Url[]    // Many-to-many relationship with urls
+  createdAt DateTime @default(now())
 }

@@ -1,230 +1,226 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
+import { ArrowRight, Link2, Tag, MousePointerClick, Globe } from "lucide-react";
+import Link from "next/link";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-type Url = {
+interface Stats {
+  urls: number;
+  tags: number;
+  domains: number;
+  visits: number;
+  chartData?: { date: string, visits: number }[];
+}
+
+interface Url {
   id: string;
   originalUrl: string;
   shortCode: string;
+  title: string | null;
   clicks: number;
   createdAt: string;
-};
+  tags: { id: string; name: string }[];
+}
 
-export default function Home() {
-  const [originalUrl, setOriginalUrl] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [urls, setUrls] = useState<Url[]>([]);
-  const [error, setError] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+export default function OverviewPage() {
+  const [stats, setStats] = useState<Stats>({ urls: 0, tags: 0, domains: 0, visits: 0 });
+  const [recentUrls, setRecentUrls] = useState<Url[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchUrls = async () => {
-    try {
-      const res = await fetch('/api/urls');
-      if (res.ok) {
-        const data = await res.json();
-        setUrls(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch URLs');
-    }
-  };
-
-  // Check auth on load
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const res = await fetch('/api/auth/check');
-        if (res.ok) {
-          setIsLoggedIn(true);
-          await fetchUrls();
+        const [statsRes, urlsRes] = await Promise.all([
+          fetch("/api/stats"),
+          fetch("/api/urls")
+        ]);
+
+        if (statsRes.ok) {
+          setStats(await statsRes.json());
         }
-      } catch (err) {
-        // Not logged in
+        if (urlsRes.ok) {
+          const allUrls = await urlsRes.json();
+          // Take top 5 for recent URLs
+          setRecentUrls(allUrls.slice(0, 5));
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard data");
       } finally {
-        setCheckingAuth(false);
+        setLoading(false);
       }
     };
-    checkAuth();
+
+    fetchDashboardData();
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
-
-      if (res.ok) {
-        setIsLoggedIn(true);
-        await fetchUrls();
-      } else {
-        const data = await res.json();
-        setError(data.error || 'Login failed');
-      }
-    } catch (err) {
-      setError('An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setIsLoggedIn(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch('/api/shorten', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ originalUrl }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to shorten URL');
-        if (res.status === 401) {
-          setIsLoggedIn(false); // Session expired or invalid
-        }
-      } else {
-        setUrls((prev) => [data, ...prev]);
-        setOriginalUrl('');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  if (checkingAuth) {
-    return <div className="min-h-screen bg-white text-black dark:bg-black dark:text-white flex items-center justify-center">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-white"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-white text-black dark:bg-[#0a0a0a] dark:text-white font-sans selection:bg-gray-200 dark:selection:bg-gray-800 transition-colors">
-      
-      {/* Top Nav (Logout button) */}
-      {isLoggedIn && (
-        <div className="absolute top-0 right-0 p-6">
-          <button onClick={handleLogout} className="text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white transition-colors">
-            Sign out
-          </button>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total URLs */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">TOTAL URLS</p>
+            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{stats.urls.toLocaleString()}</h3>
+          </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-full text-blue-600 dark:text-blue-400">
+            <Link2 size={28} />
+          </div>
         </div>
-      )}
 
-      <main className="max-w-3xl mx-auto px-6 py-24 flex flex-col items-center">
+        {/* Total Visits */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">TOTAL VISITS</p>
+            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{stats.visits.toLocaleString()}</h3>
+          </div>
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-full text-emerald-600 dark:text-emerald-400">
+            <MousePointerClick size={28} />
+          </div>
+        </div>
+
+        {/* Total Tags */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">TAGS</p>
+            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{stats.tags.toLocaleString()}</h3>
+          </div>
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-full text-purple-600 dark:text-purple-400">
+            <Tag size={28} />
+          </div>
+        </div>
+
+        {/* Domains */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">DOMAINS</p>
+            <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{stats.domains?.toLocaleString() || 0}</h3>
+          </div>
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-full text-indigo-600 dark:text-indigo-400">
+            <Globe size={28} />
+          </div>
+        </div>
+      </div>
+
+      {/* Chart Section */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Visits Overview</h2>
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full">Last 7 Days</span>
+        </div>
         
-        {/* Header section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            Link Shortener
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-lg">
-            Create fast, reliable, and trackable links.
-          </p>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="w-full">
-          {!isLoggedIn ? (
-            <div className="max-w-md mx-auto">
-              <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                <input
-                  type="password"
-                  placeholder="Enter admin password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent border border-gray-300 dark:border-gray-800 rounded-lg px-4 py-3 focus:outline-none focus:border-black dark:focus:border-white transition-colors text-center"
-                  required
+        <div className="h-72 w-full">
+          {stats?.chartData && stats.chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stats.chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#525252" opacity={0.2} />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#71717a' }} 
+                  dy={10}
                 />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-black text-white dark:bg-white dark:text-black font-medium rounded-lg px-6 py-3 transition-colors hover:opacity-90 disabled:opacity-50"
-                >
-                  {loading ? 'Authenticating...' : 'Sign In'}
-                </button>
-              </form>
-              {error && <p className="text-red-500 mt-4 text-sm text-center">{error}</p>}
-            </div>
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#71717a' }}
+                  dx={-10}
+                  allowDecimals={false}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '13px' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="visits" 
+                  stroke="#3b82f6" 
+                  strokeWidth={3}
+                  dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: '#3b82f6' }}
+                  activeDot={{ r: 6, strokeWidth: 0, fill: '#3b82f6' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center w-full">
-              <form onSubmit={handleSubmit} className="w-full flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="https://example.com/very/long/url"
-                  value={originalUrl}
-                  onChange={(e) => setOriginalUrl(e.target.value)}
-                  className="flex-1 bg-transparent border border-gray-300 dark:border-gray-800 rounded-lg px-4 py-3 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-black text-white dark:bg-white dark:text-black font-medium rounded-lg px-6 py-3 transition-colors hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
-                >
-                  {loading ? 'Processing...' : 'Shorten'}
-                </button>
-              </form>
-              {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
-
-              {/* Results list */}
-              {urls.length > 0 && (
-                <div className="w-full mt-12 flex flex-col gap-3">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">Recent Links</h2>
-                  {urls.map((url) => {
-                    const shortLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/${url.shortCode}`;
-                    return (
-                      <div key={url.id} className="group border border-gray-200 dark:border-gray-800 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-gray-300 dark:hover:border-gray-700 transition-colors bg-gray-50/50 dark:bg-[#111]">
-                        <div className="overflow-hidden w-full sm:w-auto">
-                          <p className="text-gray-500 dark:text-gray-400 text-xs truncate mb-1" title={url.originalUrl}>
-                            {url.originalUrl}
-                          </p>
-                          <a href={shortLink} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
-                            {shortLink}
-                          </a>
-                        </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                          <span className="text-xs font-mono text-gray-500 bg-white dark:bg-black px-2 py-1 rounded border border-gray-200 dark:border-gray-800">
-                            {url.clicks} clicks
-                          </span>
-                          <button
-                            onClick={() => copyToClipboard(shortLink)}
-                            className="text-gray-400 hover:text-black dark:hover:text-white p-2 rounded transition-colors"
-                            title="Copy to clipboard"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-900/50">
+              <MousePointerClick className="text-zinc-300 dark:text-zinc-700 mb-2" size={32} />
+              <p className="text-zinc-500 dark:text-zinc-400 font-medium">No visit data available</p>
             </div>
           )}
         </div>
-      </main>
+      </div>
+
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Recently created URLs</h2>
+          <Link href="/urls" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center">
+            See all <ArrowRight size={14} className="ml-1" />
+          </Link>
+        </div>
+        
+        {recentUrls.length === 0 ? (
+          <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+            No URLs created yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/50 uppercase">
+                <tr>
+                  <th className="px-6 py-3 font-medium">Created at</th>
+                  <th className="px-6 py-3 font-medium">Short URL</th>
+                  <th className="px-6 py-3 font-medium">Title / Long URL</th>
+                  <th className="px-6 py-3 font-medium">Tags</th>
+                  <th className="px-6 py-3 font-medium text-right">Visits</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                {recentUrls.map((url) => (
+                  <tr key={url.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                      {new Date(url.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium text-blue-600 dark:text-blue-400">
+                      <a href={`/${url.shortCode}`} target="_blank" rel="noopener noreferrer">
+                        {typeof window !== 'undefined' ? window.location.origin : ''}/{url.shortCode}
+                      </a>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-zinc-900 dark:text-zinc-100 font-medium truncate max-w-xs" title={url.title || ''}>
+                        {url.title || 'No title'}
+                      </div>
+                      <div className="text-zinc-500 dark:text-zinc-400 text-xs truncate max-w-xs mt-1" title={url.originalUrl}>
+                        {url.originalUrl}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {url.tags.length > 0 ? url.tags.map(tag => (
+                          <span key={tag.id} className="px-2 py-1 text-[10px] font-medium bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded">
+                            {tag.name}
+                          </span>
+                        )) : <span className="text-zinc-400 italic">None</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right font-medium text-zinc-900 dark:text-zinc-100">
+                      {url.clicks.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

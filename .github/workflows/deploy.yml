@@ -63,5 +63,8 @@ jobs:
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} &&
             export GITHUB_ACTOR=${{ github.actor }} &&
             docker compose pull &&
-            docker compose up -d
+            docker compose up -d &&
+            echo 'Waiting for container to start...' &&
+            sleep 5 &&
+            docker exec nextjs-shortener npx prisma db push
           "
