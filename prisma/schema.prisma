@@ -27,6 +27,9 @@ model Url {
   domainId    String?  // Null means it uses the default domain
   domain      Domain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
   visits      Visit[]
+  expiresAt   DateTime?
+  fbPixelId   String?
+  googleTagId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
