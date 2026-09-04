@@ -13,6 +13,11 @@ export default function CreateUrlPage() {
   const [tagInput, setTagInput] = useState("");
   const [availableTags, setAvailableTags] = useState<{ id: string, name: string }[]>([]);
 
+  const [useUTM, setUseUTM] = useState(false);
+  const [utmSource, setUtmSource] = useState("");
+  const [utmMedium, setUtmMedium] = useState("");
+  const [utmCampaign, setUtmCampaign] = useState("");
+
   // Domains
   const [domains, setDomains] = useState<{id: string, host: string}[]>([]);
   const [selectedDomain, setSelectedDomain] = useState<string>("");
@@ -72,8 +77,31 @@ export default function CreateUrlPage() {
     setSuccess(null);
 
     try {
+      let finalUrl = originalUrl;
+      
+      // Append UTM parameters if enabled
+      if (useUTM) {
+        if (!utmSource || !utmMedium) {
+          setError("UTM Source and UTM Medium are required when UTM Builder is enabled.");
+          setLoading(false);
+          return;
+        }
+        
+        try {
+          const urlObj = new URL(originalUrl);
+          urlObj.searchParams.set("utm_source", utmSource);
+          urlObj.searchParams.set("utm_medium", utmMedium);
+          if (utmCampaign) urlObj.searchParams.set("utm_campaign", utmCampaign);
+          finalUrl = urlObj.toString();
+        } catch (err) {
+          setError("Invalid original URL format.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const payload: any = {
-        originalUrl,
+        originalUrl: finalUrl,
         customSlug: customSlug || undefined,
         title: title || undefined,
         tags
@@ -100,6 +128,10 @@ export default function CreateUrlPage() {
         setOriginalUrl("");
         setCustomSlug("");
         setTitle("");
+        setUseUTM(false);
+        setUtmSource("");
+        setUtmMedium("");
+        setUtmCampaign("");
       } else {
         setError(data.error || "Something went wrong");
       }
@@ -131,6 +163,57 @@ export default function CreateUrlPage() {
               required
               className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
             />
+          </div>
+
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useUTM}
+                  onChange={(e) => setUseUTM(e.target.checked)}
+                  className="w-4 h-4 text-black border-zinc-300 rounded focus:ring-black dark:focus:ring-white dark:bg-zinc-800 dark:border-zinc-600"
+                />
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">UTM Builder (Optional)</span>
+              </label>
+            </div>
+            
+            {useUTM && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-6 animate-in slide-in-from-top-2 fade-in duration-200">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Source *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. facebook"
+                    value={utmSource}
+                    onChange={(e) => setUtmSource(e.target.value)}
+                    required={useUTM}
+                    className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Medium *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. cpc"
+                    value={utmMedium}
+                    onChange={(e) => setUtmMedium(e.target.value)}
+                    required={useUTM}
+                    className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Campaign</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. summer_sale"
+                    value={utmCampaign}
+                    onChange={(e) => setUtmCampaign(e.target.value)}
+                    className="w-full py-2 px-3 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-colors text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

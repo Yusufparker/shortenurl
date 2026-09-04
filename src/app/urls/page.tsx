@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Trash2, Copy, ExternalLink, Search, AlertCircle, X } from "lucide-react";
+import Link from "next/link";
 
 interface Url {
   id: string;
@@ -187,13 +188,22 @@ export default function UrlsListPage() {
                         {url.clicks.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <button 
-                          onClick={() => openDeleteModal(url)}
-                          className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Link 
+                            href={`/urls/${url.id}`}
+                            className="text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                            title="View Analytics"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                          </Link>
+                          <button 
+                            onClick={() => openDeleteModal(url)}
+                            className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

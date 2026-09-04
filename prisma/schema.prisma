@@ -41,6 +41,10 @@ model Visit {
   userAgent String?
   referer   String?
   country   String?
+  city      String?
+  browser   String?
+  os        String?
+  device    String?
   createdAt DateTime @default(now())
 }
 
